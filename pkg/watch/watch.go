@@ -85,7 +85,7 @@ type FakeWatcher struct {
 
 func NewFake() *FakeWatcher {
 	return &FakeWatcher{
-		result: make(chan Event),
+		result: make(chan Event, 100),
 	}
 }
 
@@ -104,7 +104,7 @@ func (f *FakeWatcher) Reset() {
 	f.Lock()
 	defer f.Unlock()
 	f.Stopped = false
-	f.result = make(chan Event)
+	f.result = make(chan Event, 100)
 }
 
 func (f *FakeWatcher) ResultChan() <-chan Event {

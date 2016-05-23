@@ -168,11 +168,16 @@ func (s *WatchServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	flusher.Flush()
 
 	buf := &bytes.Buffer{}
+	pending := 0
 	for {
 		select {
 		case <-cn.CloseNotify():
+			fmt.Println(flushed)
+
 			return
 		case <-timeoutCh:
+			fmt.Println(flushed)
+
 			return
 		case event, ok := <-s.watching.ResultChan():
 			if !ok {
@@ -196,8 +201,15 @@ func (s *WatchServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				// client disconnect.
 				return
 			}
-			flusher.Flush()
-
+			pending++
+			// flush the buffer is there is not following events in the chan, so we reply fast
+			// under light-load.
+			// flush the buffer when the pending requests are more than 100, so we effectively batch
+			// flushes and do not try to batch too much.
+			if len(s.watching.ResultChan()) == 0 || pending > 100 {
+				flusher.Flush()
+				pending = 0
+			}
 			buf.Reset()
 		}
 	}
